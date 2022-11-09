@@ -92,22 +92,28 @@ function SolverCore.reset!(solver::R2Solver{T}) where {T}
 end
 SolverCore.reset!(solver::R2Solver, ::AbstractNLPModel) = reset!(solver)
 
+
+#x::V = nlp.meta.x0,
+
+# atol::T = √eps(T),
+# rtol::T = √eps(T),
+# η1 = eps(T)^(1 / 4),
+# η2 = T(0.95),
+# γ1 = T(1 / 2),
+# γ2 = 1 / γ1,
+# σmin = zero(T),
+
+# max_time::Float64 = 30.0,
+# max_eval::Int = -1,
+# β::T = T(0),
 function SolverCore.solve!(
   solver::R2Solver{T, V},
   nlp::AbstractNLPModel{T, V},
   stats::GenericExecutionStats{T, V};
-  callback = (args...) -> nothing,
-  x::V = nlp.meta.x0,
-  atol::T = √eps(T),
-  rtol::T = √eps(T),
-  η1 = eps(T)^(1 / 4),
-  η2 = T(0.95),
-  γ1 = T(1 / 2),
-  γ2 = 1 / γ1,
-  σmin = zero(T),
-  max_time::Float64 = 30.0,
-  max_eval::Int = -1,
-  β::T = T(0),
+  #x::V = nlp.meta.x0,
+
+  param::AbstractParameterSet{T},
+  callback = (args...) -> nothing, 
   verbose::Int = 0,
 ) where {T, V}
   unconstrained(nlp) || error("R2 should only be called on unconstrained problems.")
