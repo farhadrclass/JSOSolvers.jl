@@ -16,13 +16,13 @@ For advanced usage, first define a `R2Solver` to preallocate the memory used in 
 # Keyword arguments 
 - `x::V = nlp.meta.x0`: the initial guess.
 - `atol::T = √eps(T)`: absolute tolerance.
-- `param.rtol.value::T = √eps(T)`: relative tolerance: algorithm stops when ‖∇f(xᵏ)‖ ≤ atol + param.rtol.value * ‖∇f(x⁰)‖.
-- `param.η1.value = eps(T)^(1/4)`, `param.η2.value = T(0.95)`: step acceptance parameters.
-- `param.γ1.value = T(1/2)`, `param.γ2.value = 1/param.γ1.value`: regularization update parameters.
-- `param.σmin.value = eps(T)`: step parameter for R2 algorithm.
+- `rtol::T = √eps(T)`: relative tolerance: algorithm stops when ‖∇f(xᵏ)‖ ≤ atol + rtol * ‖∇f(x⁰)‖.
+- `η1 = eps(T)^(1/4)`, `η2 = T(0.95)`: step acceptance parameters.
+- `γ1 = T(1/2)`, `γ2 = 1/γ1`: regularization update parameters.
+- `σmin = eps(T)`: step parameter for R2 algorithm.
 - `max_eval::Int = -1`: maximum number of evaluation of the objective function.
 - `max_time::Float64 = 30.0`: maximum time limit in seconds.
-- `param.β.value = T(0) ∈ [0,1]` is the constant in the momentum term. If `param.β.value == 0`, R2 does not use momentum.
+- `β = T(0) ∈ [0,1]` is the constant in the momentum term. If `β == 0`, R2 does not use momentum.
 - `verbose::Int = 0`: if > 0, display iteration details every `verbose` iteration.
 
 # Output
@@ -92,23 +92,30 @@ function SolverCore.reset!(solver::R2Solver{T}) where {T}
 end
 SolverCore.reset!(solver::R2Solver, ::AbstractNLPModel) = reset!(solver)
 
-
-
-# param.atol.value::T = √eps(T),
-# param.rtol.value::T = √eps(T),
-# param.η1.value = eps(T)^(1 / 4),
-# param.η2.value = T(0.95),
-# param.γ1.value = T(1 / 2),
-# param.γ2.value = 1 / param.γ1.value,
-# param.σmin.value = zero(T),
-# param.β.value::T = T(0),
 function SolverCore.solve!(
   solver::R2Solver{T, V},
   nlp::AbstractNLPModel{T, V},
   stats::GenericExecutionStats{T, V};
-  x::V = nlp.meta.x0,
   param::AbstractParameterSet{T},
-  callback = (args...) -> nothing, 
+  callback = (args...) -> nothing,
+  
+  
+  
+  x::V = nlp.meta.x0,
+
+  atol::T = √eps(T),
+  rtol::T = √eps(T),
+  η1 = eps(T)^(1 / 4),
+  η2 = T(0.95),
+  γ1 = T(1 / 2),
+  γ2 = 1 / γ1,
+  σmin = zero(T),
+  
+  max_time::Float64 = 30.0,
+  max_eval::Int = -1,
+
+  β::T = T(0),
+  
   verbose::Int = 0,
 ) where {T, V}
   unconstrained(nlp) || error("R2 should only be called on unconstrained problems.")
@@ -132,7 +139,7 @@ function SolverCore.solve!(
   σk = 2^round(log2(norm_∇fk + 1))
 
   # Stopping criterion: 
-  ϵ = param.atol.value + param.rtol.value * norm_∇fk
+  ϵ = atol + rtol * norm_∇fk
   optimal = norm_∇fk ≤ ϵ
   if optimal
     @info("Optimal point found at initial point")
@@ -160,10 +167,10 @@ function SolverCore.solve!(
   done = stats.status != :unknown
 
   while !done
-    if param.β.value == 0
+    if β == 0
       ck .= x .- (∇fk ./ σk)
     else
-      d .= ∇fk .* (T(1) - param.β.value) .+ d .* param.β.value
+      d .= ∇fk .* (T(1) - β) .+ d .* β
       ck .= x .- (d ./ σk)
     end
     ΔTk = norm_∇fk^2 / σk
@@ -176,14 +183,14 @@ function SolverCore.solve!(
     ρk = (stats.objective - fck) / ΔTk
 
     # Update regularization parameters
-    if ρk >= param.η2.value
-      σk = max(param.σmin.value, param.γ1.value * σk)
-    elseif ρk < param.η1.value
-      σk = σk * param.γ2.value
+    if ρk >= η2
+      σk = max(σmin, γ1 * σk)
+    elseif ρk < η1
+      σk = σk * γ2
     end
 
     # Acceptance of the new candidate
-    if ρk >= param.η1.value
+    if ρk >= η1
       x .= ck
       set_objective!(stats, fck)
       grad!(nlp, x, ∇fk)
