@@ -98,11 +98,7 @@ function SolverCore.solve!(
   stats::GenericExecutionStats{T, V};
   param::AbstractParameterSet{T},
   callback = (args...) -> nothing,
-  
-  
-  
   x::V = nlp.meta.x0,
-
   atol::T = √eps(T),
   rtol::T = √eps(T),
   η1 = eps(T)^(1 / 4),
@@ -110,12 +106,9 @@ function SolverCore.solve!(
   γ1 = T(1 / 2),
   γ2 = 1 / γ1,
   σmin = zero(T),
-  
   max_time::Float64 = 30.0,
   max_eval::Int = -1,
-
   β::T = T(0),
-  
   verbose::Int = 0,
 ) where {T, V}
   unconstrained(nlp) || error("R2 should only be called on unconstrained problems.")

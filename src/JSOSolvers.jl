@@ -2,7 +2,7 @@ module JSOSolvers
 
 # stdlib
 using LinearAlgebra, Logging, Printf
-using SolverParameters 
+using SolverParameters
 # JSO packages
 using Krylov, LinearOperators, NLPModels, NLPModelsModifiers, SolverCore, SolverTools
 
